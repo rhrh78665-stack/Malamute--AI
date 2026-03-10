@@ -13,4 +13,4 @@ RUN cd bot-whatsapp && npm install
 
 EXPOSE 8000
 
-CMD ["/venv/bin/uvicorn", "brain.main:app", "--host", "0.0.0.0", "--port", "8000", "--app-dir", "brain"]
+CMD ["bash", "-c", "cd /app/brain && /venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000"]
