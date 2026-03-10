@@ -1,12 +1,29 @@
-const { makeWASocket, DisconnectReason, useMultiFileAuthState } = require('baileys')
-const qrcode = require('qrcode-terminal')
-const axios = require('axios')
+const baileys = require('baileys')
+const makeWASocket = baileys.default
+const { useMultiFileAuthState, DisconnectReason } = baileys
 const pino = require('pino')
+const axios = require('axios')
+const express = require('express')
+const qrcode = require('qrcode')
 
-const BRAIN_URL = 'https://malamute-ai-production.up.railway.app'
+const app = express()
+const BRAIN_URL = process.env.BRAIN_URL || 'https://malamute-ai-production.up.railway.app'
+
+let qrImageUrl = null
+let connected = false
+
+app.get('/', (req, res) => {
+    if (connected) {
+        res.send('<h1>Malamute AI conectado a WhatsApp</h1>')
+    } else if (qrImageUrl) {
+        res.send(`<h1>Escanea este QR con WhatsApp</h1><img src="${qrImageUrl}" style="width:300px"/>`)
+    } else {
+        res.send('<h1>Iniciando Malamute AI...</h1><meta http-equiv="refresh" content="3">')
+    }
+})
 
 async function conectarWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info')
+    const { state, saveCreds } = await useMultiFileAuthState('/tmp/auth_info')
 
     const sock = makeWASocket({
         auth: state,
@@ -16,17 +33,20 @@ async function conectarWhatsApp() {
 
     sock.ev.on('creds.update', saveCreds)
 
-    sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
+    sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
         if (qr) {
-            console.log('\nMALAMUTE AI - Escanea este QR:\n')
-            qrcode.generate(qr, { small: true })
+            console.log('QR generado')
+            qrImageUrl = await qrcode.toDataURL(qr)
+            connected = false
+        }
+        if (connection === 'open') {
+            console.log('Malamute AI conectado')
+            connected = true
+            qrImageUrl = null
         }
         if (connection === 'close') {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
             if (shouldReconnect) conectarWhatsApp()
-        }
-        if (connection === 'open') {
-            console.log('Malamute AI conectado a WhatsApp')
         }
     })
 
@@ -79,4 +99,6 @@ async function conectarWhatsApp() {
     })
 }
 
+const PORT = process.env.PORT || 3000
+app.listen(PORT, () => console.log(`Malamute AI corriendo en puerto ${PORT}`))
 conectarWhatsApp()
