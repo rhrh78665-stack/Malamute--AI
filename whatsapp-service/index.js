@@ -1,4 +1,4 @@
-const baileys = require('baileys')
+const baileys = require('@whiskeysockets/baileys')
 const makeWASocket = baileys.default
 const { useMultiFileAuthState, DisconnectReason } = baileys
 const pino = require('pino')
