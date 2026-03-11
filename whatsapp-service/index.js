@@ -35,15 +35,15 @@ async function conectarWhatsApp() {
 
     sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
         if (qr) {
-            console.log('QR generado')
             qrImageUrl = await qrcode.toDataURL(qr)
             connected = false
         }
+
         if (connection === 'open') {
-            console.log('Malamute AI conectado')
             connected = true
             qrImageUrl = null
         }
+
         if (connection === 'close') {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
             if (shouldReconnect) conectarWhatsApp()
@@ -67,8 +67,9 @@ async function conectarWhatsApp() {
                     { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
                 )
                 respuesta = res.data.respuesta
+            }
 
-            } else if (tipo === 'audioMessage') {
+            else if (tipo === 'audioMessage') {
                 const buffer = await sock.downloadMediaMessage(msg)
                 const FormData = require('form-data')
                 const form = new FormData()
@@ -76,8 +77,9 @@ async function conectarWhatsApp() {
                 form.append('historial', '[]')
                 const res = await axios.post(`${BRAIN_URL}/audio`, form, { headers: form.getHeaders() })
                 respuesta = res.data.respuesta
+            }
 
-            } else if (tipo === 'imageMessage') {
+            else if (tipo === 'imageMessage') {
                 const buffer = await sock.downloadMediaMessage(msg)
                 const caption = msg.message.imageMessage?.caption || ''
                 const FormData = require('form-data')
@@ -94,11 +96,16 @@ async function conectarWhatsApp() {
             }
 
         } catch (error) {
-            console.error('Error:', error.message)
+            console.error(error.message)
         }
     })
 }
 
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => console.log(`Malamute AI corriendo en puerto ${PORT}`))
-conectarWhatsApp()
+
+app.listen(PORT, () => {
+    console.log(`Malamute AI corriendo en puerto ${PORT}`)
+    setTimeout(() => {
+        conectarWhatsApp()
+    }, 2000)
+})
